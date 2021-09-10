@@ -1,5 +1,4 @@
-# INITIAL COMMIT 
-GROUP 1 Email CLIENT
+# GROUP 1 Email CLIENT
 
 A. Team Members
 
