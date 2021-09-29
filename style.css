@@ -64,3 +64,19 @@ border: 2px solid black;
 background-color: black;
 color: white;
 }
+
+#buttonEnter {
+	background-color:#E0B0FF;
+	border-color:#702963;
+	color:white;
+		
+}
+
+#SignUp{
+position: relative;
+text-align:center;
+
+
+border-color:#702963;
+color:black; 
+}
