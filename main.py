@@ -2,6 +2,8 @@
 
 import os
 from flask import Flask, render_template, redirect, session, url_for, request
+from google.oauth2 import credentials
+from googleapiclient.discovery import build
 import auth
 
 app = Flask(__name__)
@@ -11,7 +13,7 @@ app.secret_key = "CHANGE ME IN PRODUCTION" # TODO Needed for session
 def index():
     return render_template('index.html')
 
-# Authentication
+# Authenticate/authorize
 @app.route("/auth")
 def authorize():
     # Get authorization url to redirect to
@@ -32,12 +34,14 @@ def oauth2callback():
         session['state'],
         request.url # authorization_response
     )
+
+    # Redirect to index
     return redirect(url_for('index'))
 
 @app.route("/revoke")
+def revoke():
     # Revokes credentials (not working)
     # FIXME
-def revoke():
     revoke = auth.revokeAuth(session)
     if revoke:
         return redirect(url_for('index'))
@@ -52,7 +56,37 @@ def clear():
         del session['credentials']
         return redirect(url_for('index'))
     else:
-        return "<p>No stored credentials<br><a href='/'>index</a></p>"
+        return ("<p>No stored credentials<br><a href='/'>index</a></p>")
+
+# Labels test
+@app.route("/labels")
+def labels():
+    if 'credentials' not in session:
+        return ("You're not logged in")
+
+    # Create credentials object from credentials dict stored in session
+    creds = credentials.Credentials(**session['credentials'])
+
+    # Build service object for API
+    service = build(
+        auth.API_SERVICE_NAME,
+        auth.API_VERSION, 
+        credentials = creds
+    )
+
+    # API Call
+    results = service.users().labels().list(userId='me').execute()
+    labels = results.get('labels', [])
+
+    if not labels:
+        return ("No labels found")
+    
+    output = "<h1>Labels</h1><br>"
+    for label in labels:
+        output += (label['name'] + ":      " + str(label) + "<br>")
+    
+    output += "<a href='/'>Index</a"
+    return output
 
 @app.route("/start")
 def star():

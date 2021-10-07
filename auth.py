@@ -1,7 +1,8 @@
-# Functions specific to web Google OAUTH2 Authorization necessary for Gmail API
+# Functions specific to web Google OAUTH2 Auth necessary for Gmail API
 # Most code modified from Google OAUTH2 docs
 # https://developers.google.com/identity/protocols/oauth2/web-server#python
 
+import requests
 import google.oauth2.credentials
 import google_auth_oauthlib.flow
 import googleapiclient.discovery
@@ -10,7 +11,7 @@ CLIENT_SECRETS_FILE_LOC = "../.secret/client_secret.json"
 SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']
 API_SERVICE_NAME = 'gmail'
 API_VERSION = 'v1'
-passthrough = "test"
+passthrough = "test" # This is used for something or rather
 # SSL_CONTEXT # Tuple that holds SSL cert and key, used for SSL in flask
             # Shouldn't be an issue in prod
 
@@ -48,30 +49,31 @@ def getCredentials(redirect_uri, state, authorization_response):
     #              credentials in a persistent database instead.
 
     return credentials_to_dict(flow.credentials)
-    return flask.redirect(flask.url_for('test_api_request'))
 
 def revokeAuth(session):
     if 'credentials' not in session:
         return False
 
-        credentials = google.oauth2.credentials.Credentials(
-        **session['credentials'])
+    credentials = google.oauth2.credentials.Credentials(
+    **session['credentials'])
 
-        revoke = requests.post('https://oauth2.googleapis.com/revoke',
-            params={'token': credentials.token},
-            headers = {'content-type': 'application/x-www-form-urlencoded'})
+    revoke = requests.post('https://oauth2.googleapis.com/revoke',
+        params={'token': credentials.token},
+        headers = {'content-type': 'application/x-www-form-urlencoded'})
 
-        status_code = getattr(revoke, 'status_code')
-        if status_code == 200:
-            return True
-        else:
-            return False
+    status_code = getattr(revoke, 'status_code')
+    if status_code == 200:
+        return True
+    else:
+        return False
 
 
 def credentials_to_dict(credentials):
-  return {'token': credentials.token,
-          'refresh_token': credentials.refresh_token,
-          'token_uri': credentials.token_uri,
-          'client_id': credentials.client_id,
-          'client_secret': credentials.client_secret,
-          'scopes': credentials.scopes}
+  return {
+        'token': credentials.token,
+        'refresh_token': credentials.refresh_token,
+        'token_uri': credentials.token_uri,
+        'client_id': credentials.client_id,
+        'client_secret': credentials.client_secret,
+        'scopes': credentials.scopes
+        }
