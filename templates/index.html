@@ -7,7 +7,21 @@
         <h1>Hello!</h1>
         <p>This is the future home of <a href="http://www.group1email.com">www.group1email.com</a>, 
             the future home of Mississippi State University's Intro to SE Lab Project for Group 1 - Fall 2020</p>
+            
         <p>To navigate between pages in progress, please click the links below.</p>
+
+        <p>
+            {% if session['credentials'] %}
+                    client id: {{ session['credentials'].client_id}} <br>
+            {% else %} 
+                <p> You are not logged in </p>
+            {% endif %}
+        </p>
+
+        <a href="/auth">Auth</a>
+        <a href="/revoke">Revoke</a>
+        <a href="/clear">Clear</a>
+        <br>
         <a href="/login">Login</a>
         <a href="/start">Start</a>
         <a href="/register">Register</a>

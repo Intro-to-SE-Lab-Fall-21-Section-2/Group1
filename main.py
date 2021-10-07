@@ -1,12 +1,58 @@
 # Main application script
 
-from flask import Flask, render_template, redirect
+import os
+from flask import Flask, render_template, redirect, session, url_for, request
+import auth
 
 app = Flask(__name__)
+app.secret_key = "CHANGE ME IN PRODUCTION" # TODO Needed for session 
 
 @app.route("/")
 def index():
     return render_template('index.html')
+
+# Authentication
+@app.route("/auth")
+def authorize():
+    # Get authorization url to redirect to
+    authorization_url, state = auth.authorize(url_for('oauth2callback', 
+                                        _external=True))
+
+    # Store the state so the callback can verify the auth server response.
+    session['state'] = state
+
+    # Eventually redirects to /oauth2callback
+    return redirect(authorization_url)
+
+@app.route("/oauth2callback")
+def oauth2callback():
+    # Get credientials from returned authorixation_url
+    session['credentials'] = auth.getCredentials(
+        url_for('oauth2callback', _external = True), # redirect_url
+        session['state'],
+        request.url # authorization_response
+    )
+    return redirect(url_for('index'))
+
+@app.route("/revoke")
+    # Revokes credentials (not working)
+    # FIXME
+def revoke():
+    revoke = auth.revokeAuth(session)
+    if revoke:
+        return redirect(url_for('index'))
+    else: 
+        return ("<p>Error revoking access<br><a href='/'>index</a></p>" + 
+                "<p> You are most likely still logged in </p>")
+
+@app.route("/clear")
+def clear():
+    # Clears creds from session (logs out)
+    if 'credentials' in session:
+        del session['credentials']
+        return redirect(url_for('index'))
+    else:
+        return "<p>No stored credentials<br><a href='/'>index</a></p>"
 
 @app.route("/start")
 def star():
@@ -48,5 +94,12 @@ def outboxRead():
 def signUp():
     return render_template('signup.html')
 
+
 if __name__ == "__main__":
-    app.run(debug=True, host='0.0.0.0', port=80) 
+    # DO NOT USE IN PRODUCTION
+    # DISABLES HTTPS requirement for OAUTH2
+    os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
+    # TODO enable SSL on httpd server
+
+    # Set debug=False in production
+    app.run(debug=True, host='127.0.0.1', port=5000) 
