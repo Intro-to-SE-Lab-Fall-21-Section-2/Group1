@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>API Playground</title>
+    </head>
+    <body>
+        <h1>Labels</h1>
+        <br>
+        {% if not labels %}
+            <p>Error retrieving labels</p>
+        {% else %}
+            <table>
+                <tr>
+                    <th>id</th>
+                    <th>name</th>
+                    <th>messageListVisibility</th>
+                    <th>labelListVisibility</th>
+                    <th>type</th>
+                </tr>
+                {% for label in labels %}
+                    <tr>
+                        <td>{{ label['id'] }}</td>
+                        <td>{{ label['name'] }}</td>
+                        <td>{{ label['messageListVisibility'] }}</td>
+                        <td>{{ label['labelListVisibility'] }}</td>
+                        <td>{{ label['type'] }}</td>
+                    </tr>
+                {% endfor %}
+            </table>
+        {% endif %}
+    </body>
+</html>
