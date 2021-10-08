@@ -1,11 +1,14 @@
 # Main application script
 
+import json
+from inspect import getmembers
 import os
 from flask import Flask, render_template, redirect, session, url_for, request
 from google.oauth2 import credentials
 from googleapiclient.discovery import build
 
 import auth
+from messages import Message
 
 app = Flask(__name__)
 app.secret_key = "CHANGE ME IN PRODUCTION" # TODO Needed for session
@@ -73,7 +76,18 @@ def clear():
 @app.route("/playgroud")
 def api_playgroud():
     labels = getLabels()
+
     return render_template('api_playground.html', labels=labels)
+
+@app.route("/inbox")
+def inbox():
+    buildService(session['credentials'])
+    message_id_dict = service.users().messages().list(userId='me', maxResults=25).execute()
+    messages =  []
+    for message in message_id_dict['messages']:
+        messages.append(Message(message['id'], service))
+        
+    return render_template("inboxread.html", messages=messages)
 
 @app.route("/start")
 def star():
@@ -140,6 +154,7 @@ def getLabels():
     results = service.users().labels().list(userId='me').execute()
     labels = results.get('labels', [])
     return labels
+
 
 # Flask preferences
 if __name__ == "__main__":
