@@ -5,6 +5,10 @@ Group1Email relies on the `flask` microframework, as well as the Google client l
 	pip install --upgrade google-api-python-client google-auth-httplib2 google-auth-oauthlib flask json requests
 	
 You must also obtain OAuth 2.0 credentials from Google. See the [Google OAuth 2.0 Access Docs](https://developers.google.com/identity/protocols/oauth2) for information on how to obtain client credentials.
+## Helpful Resources
+- [Jinja Template Designer Docs](https://jinja.palletsprojects.com/en/2.10.x/templates/)
+- [Gmail API Guides](https://developers.google.com/gmail/api/guides)
+- [Gmail API Reference](https://developers.google.com/gmail/api/reference/rest)
 
 A. Team Members
 
