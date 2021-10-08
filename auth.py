@@ -5,7 +5,6 @@
 import requests
 import google.oauth2.credentials
 import google_auth_oauthlib.flow
-import googleapiclient.discovery
 
 CLIENT_SECRETS_FILE_LOC = "../.secret/client_secret.json"
 SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']

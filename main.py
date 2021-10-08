@@ -1,15 +1,15 @@
 # Main application script
 
 import os
-from re import template
 from flask import Flask, render_template, redirect, session, url_for, request
 from google.oauth2 import credentials
-from googleapiclient.discovery import build, Resource
+from googleapiclient.discovery import build
+
 import auth
-service = False
 
 app = Flask(__name__)
 app.secret_key = "CHANGE ME IN PRODUCTION" # TODO Needed for session
+service = False
 
 @app.route("/")
 def index():
@@ -72,8 +72,7 @@ def clear():
 
 @app.route("/playgroud")
 def api_playgroud():
-    labels = getLabels(session['credentials']['client_id'])
-    
+    labels = getLabels()
     return render_template('api_playground.html', labels=labels)
 
 @app.route("/start")
@@ -134,8 +133,8 @@ def buildService(session_creds):
     )
     print("main.py: buildService(): New service resource built")
 
-def getLabels(user_id):
-    # Returns
+def getLabels():
+    # Returns array of labels
     # API Call
     buildService(session['credentials'])
     results = service.users().labels().list(userId='me').execute()

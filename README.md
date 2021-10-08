@@ -1,4 +1,10 @@
 # GROUP 1 Email CLIENT
+## Depenencies
+Group1Email relies on the `flask` microframework, as well as the Google client library, `json`, and `requests`. All dependencies can be installed using `pip`.
+
+	pip install --upgrade google-api-python-client google-auth-httplib2 google-auth-oauthlib flask json requests
+	
+You must also obtain OAuth 2.0 credentials from Google. See the [Google OAuth 2.0 Access Docs](https://developers.google.com/identity/protocols/oauth2) for information on how to obtain client credentials.
 
 A. Team Members
 
