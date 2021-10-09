@@ -16,15 +16,10 @@ class Message:
         self.payload = msg['payload']
         self.sizeEstimate = msg['sizeEstimate']
 
-        self.headers = {}
         # Convert headers into dict
+        self.headers = {}
         for entry in self.payload['headers']:
             self.headers[entry['name']] = entry['value']
-        
-        # print(self.headers)
-
-        # for i in range(len(self.payload['headers'])):
-        #     print(str(i) + ": " + str(self.payload['headers'][i]))
 
         # Header info
         self.delivered_to = self.headers.get('Delivered-To')
@@ -32,6 +27,12 @@ class Message:
         self.subject = self.headers.get('Subject')
         # self.cc = self.payload['headers']['cc']
         # self.bcc = self.payload['headers']['bcc']
+
+        # Helpful header debug
+        # if not self.from_:
+        #     for i in range(len(self.payload['headers'])):
+        #         print(str(i) + ": " + str(self.payload['headers'][i]))
+        #     self.from_ = self.headers.get('from')
 
     
 class MessagePart:
