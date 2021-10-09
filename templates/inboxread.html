@@ -34,10 +34,10 @@
 	
 	<body style = "background-image: url('.../projectg1/mosaicsoftersmall.jpg'); background-size: cover; ">
 	<!--header section-->
-		<div class = "topBar" >
+		<div class = "topBar">
 			<p>
 				<div class = "usernameMain" style = "float: left;">
-					<h3 style = "color:white;">Temp. Place Holder</h3> 
+					<h3 style = "color:white;">{{ session['profile']['emailAddress'] }}</h3> 
 				</div>
 				<div class = "searchBar" style = "text-align: right;" >
 					<input type="searchKey"  id="keyword" placeholder="Search" style = "font-size: 20px;"> 
@@ -65,14 +65,14 @@
 		{% for message in messages %}
 		<div class = "cardEmail">
 			<div class="col-md-9" style = "float:right;">
-				<div class = "title">
-					<p style = "font-size: medium; font-weight: lighter;">{{ message.from_ }}</p>
+				<div class = "title" style="font-size: medium; font-weight: lighter;">
+					{{ message.from_ }}
 				</div>
-				<div class = "title">
-					<p style = "font-size: medium; font-weight: bold;">{{ message.subject }}</p>
+				<div class = "title" style="font-size: medium; font-weight: bold;">
+					{{ message.subject }}
 				</div>
-				<div class = "title">
-					<p style = "font-size: small;">{{ message.snippet }}...</p>
+				<div class = "title" style="font-size: small;"">
+					{{ message.snippet }}...
 				</div>
 			</div>
 		<br>

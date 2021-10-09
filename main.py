@@ -46,6 +46,8 @@ def oauth2callback():
      
     # Build API service object
     buildService(session['credentials'])
+
+    session['profile'] = service.users().getProfile(userId='me').execute()
     
     # Redirect to index
     return redirect(url_for('index'))
