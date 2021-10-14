@@ -16,8 +16,8 @@
 				float:left; 
 				float:bottom; 
 				width:15%;
-				height:50%; 	
-				position: absolute;
+				height:100%; 	
+				position: relative;
 				left: 0;
 				bottom: 0;
 				
@@ -56,23 +56,34 @@
 			<!-- side navigation bar -->
 			
 			<div class = "sideNav">
-				<a ref = "#"><p>Inbox</p></a>
-				<a ref = "#"><p>Outbox</p></a>
-				<a ref = "#"><p>Drafts</p></a>
+				Inbox  <br>
+				Unread <br>
+				Important <br>
+				Starred <br>
+				Chat <br>
+				Sent <br>
+				Draft <br>
+				Trash <br>
+				Spam <br>
+				{% for label in labels %}
+					{{ label }} <br>
+				{% endfor %}
 			</div>
 		</div>
 		
 		{% for message in messages %}
 		<div class = "cardEmail">
-			<div class="col-md-9" style = "float:right;">
-				<div class = "title" style="font-size: medium; font-weight: lighter;">
-					{{ message.from_ }}
-				</div>
-				<div class = "title" style="font-size: medium; font-weight: bold;">
-					{{ message.subject }}
-				</div>
-				<div class = "title" style="font-size: small;"">
-					{{ message.snippet }}...
+			<div class="card">
+				<div class="col-md-9" >
+					<div class = "title" style="font-size: medium; font-weight: lighter;">
+						{{ message.from_ }}
+					</div>
+					<div class = "title" style="font-size: medium; font-weight: bold;">
+						{{ message.subject }}
+					</div>
+					<div class = "title" style="font-size: small;"">
+						{{ message.snippet }}...
+					</div>
 				</div>
 			</div>
 		<br>

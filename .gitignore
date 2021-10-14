@@ -1,3 +1,4 @@
 __pycache__
 .vscode
 templates/google_signin.html
+workspace.code-workspace

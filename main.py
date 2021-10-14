@@ -1,6 +1,5 @@
 # Main application script
 
-import json
 from inspect import getmembers
 import os
 from flask import Flask, render_template, redirect, session, url_for, request
@@ -9,6 +8,9 @@ from googleapiclient.discovery import build
 
 import auth
 from messages import Message
+
+# CONSTANTS
+SYSTEM_LABELS = ["CHAT", "SENT", "INBOX", "IMPORTANT", "TRASH", "DRAFT", "SPAM", "STARRED", "UNREAD"]
 
 app = Flask(__name__)
 app.secret_key = "CHANGE ME IN PRODUCTION" # TODO Needed for session
@@ -21,6 +23,11 @@ def index():
 # Authenticate/authorize
 @app.route("/auth")
 def authorize():
+    if session.get('credentials'):
+        return ("<h1>Errpr</h1>" + 
+                "<p> You are already logged in </p>" + 
+                "<p><a href='/'>Return to index</a></p>")
+    
     # Get authorization url to redirect to
     authorization_url, state = auth.authorize(url_for('oauth2callback', 
                                         _external=True))
@@ -65,7 +72,7 @@ def revoke():
                 "<p> You were probably not logged in. </p>")
 
 @app.route("/clear")
-def clear():
+def clear(): 
     global service
     # Clears creds from session (logs out)
     service = False
@@ -83,13 +90,25 @@ def api_playgroud():
 
 @app.route("/inbox")
 def inbox():
+    show_label = request.args.get('show_label')
     buildService(session['credentials'])
+    # API Call
     message_id_dict = service.users().messages().list(userId='me', maxResults=25).execute()
+    # Construct list of `Message`s
     messages =  []
     for message in message_id_dict['messages']:
         messages.append(Message(message['id'], service))
-        
-    return render_template("inboxread.html", messages=messages)
+    
+    # Remove default system label names from list of label names. These will be
+    # hardcoded in the template
+    labels = []
+    for label in getLabels():
+        if label['name'] not in SYSTEM_LABELS:
+            if label['name']:
+                # Remove CATEGORY_ Prefix from some user labels
+                labels.append(label['name'].replace('CATEGORY_', '').capitalize())
+    
+    return render_template("inboxread.html", messages=messages, labels=labels)
 
 @app.route("/start")
 def star():
