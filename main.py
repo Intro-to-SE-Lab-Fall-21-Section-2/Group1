@@ -1,5 +1,7 @@
 # Main application script
 
+import base64
+from email import message
 from inspect import getmembers
 import os
 from flask import Flask, render_template, redirect, session, url_for, request
@@ -7,7 +9,7 @@ from google.oauth2 import credentials
 from googleapiclient.discovery import build
 
 import auth
-from messages import Message
+import email
 
 # CONSTANTS
 SYSTEM_LABELS = ['CHAT', 'SENT', 'INBOX', 'IMPORTANT', 'TRASH', 'DRAFT', 'SPAM', 'STARRED', 'UNREAD']
@@ -101,6 +103,7 @@ def inbox():
     query = request.args.get('q')
     
     buildService(session['credentials'])
+
     if label_arg:
         message_id_dict = service.users().messages().list(userId='me', maxResults=25, labelIds = [label_arg]).execute()
     else:
@@ -109,7 +112,7 @@ def inbox():
     # Construct list of `Message`s
     messages =  []
     for message in message_id_dict['messages']:
-        messages.append(Message(message['id'], service))
+        messages.append(getMessageData(message['id']))
     
     # Remove default system label names from list of label names. These will be
     # hardcoded in the template
@@ -122,6 +125,26 @@ def inbox():
             label['name'] = label['name'].replace('CATEGORY_', '').capitalize()
             user_labels.append(label)
     return render_template("inboxread.html", messages=messages, labels=user_labels)
+
+@app.route("/view")
+def view():
+
+    message_id = request.args.get('id')
+
+    buildService(session['credentials'])
+
+    message = getFullMessage(message_id)
+
+    body = message.get_body(('plain',))
+    if body:
+        body = body.get_content()
+    print(body)
+    
+    message_data = getMessageData(message_id)
+    message_data['Body'] = body
+
+    return render_template("view.html", message=message_data)
+
 
 @app.route("/start")
 def star():
@@ -172,7 +195,6 @@ def buildService(session_creds):
     print("main.py: buildService(): Building new service resource for API")
     # Create credentials object from credentials dict stored in session
     creds = credentials.Credentials(**session_creds)
-
     # Build service object for API
     service = build(
         auth.API_SERVICE_NAME,
@@ -189,6 +211,39 @@ def getLabels():
     labels = results.get('labels', [])
     return labels
 
+def getMessageData(message_id):
+    message = {}
+    message_data = service.users().messages().get(userId='me', id=message_id).execute()
+    
+    message['id'] = message_data['id']
+    message['threadId'] = message_data['threadId']
+    message['labelIds'] = message_data['labelIds']
+    message['snippet'] = message_data['snippet']
+
+    headers = headersToDict(message_data['payload']['headers'])
+
+    message['From'] = headers.get('From')
+    message['Subject'] = headers.get('Subject')
+    message['Date'] = headers.get('Date')
+
+    return message
+
+def getFullMessage(message_id):
+    # Get raw mime data
+    message_raw = service.users().messages().get(userId='me',id=message_id,format='raw').execute()
+
+    # decode raw body data
+    message_string = base64.urlsafe_b64decode(message_raw.get('raw').encode('ASCII'))
+
+    # Create mime email object
+    mime_msg = email.message_from_bytes(message_string, policy=email.policy.default)
+    return mime_msg
+
+def headersToDict(headers):
+    header_dict = {}
+    for header in headers:
+        header_dict[header['name']] = header['value']
+    return header_dict
 
 # Flask preferences
 if __name__ == "__main__":

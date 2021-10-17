@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ message['Subject'] }}{% endblock title %}
+
+{% block head %}
+
+{% endblock head %}
+
+{% block body %}
+<h1>{{message['Subject']}}</h1>
+<h2>{{message['From']}}</h2>
+<h3>{{message['Date']}} </h3>
+<pre> {{ message['Body'] }} </pre>
+{% endblock body %}
