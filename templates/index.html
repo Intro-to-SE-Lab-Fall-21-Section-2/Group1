@@ -13,7 +13,6 @@
         <p>
             {% if session['credentials'] %}
                     client id: {{ session['credentials'].client_id}} <br>
-                    email address: {{ session['profile']['emailAddress'] }}
             {% else %} 
                 <p> You are not logged in </p>
             {% endif %}

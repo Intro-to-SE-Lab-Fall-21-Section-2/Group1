@@ -18,13 +18,16 @@ service = False
 
 @app.route("/")
 def index():
-    return render_template('index.html')
+    if 'credentials' in session:
+        return inbox()
+    else:
+        return render_template('landing.html')
 
 # Authenticate/authorize
 @app.route("/auth")
 def authorize():
     if session.get('credentials'):
-        return ("<h1>Errpr</h1>" + 
+        return ("<h1>Error</h1>" + 
                 "<p> You are already logged in </p>" + 
                 "<p><a href='/'>Return to index</a></p>")
     
@@ -54,8 +57,6 @@ def oauth2callback():
     # Build API service object
     buildService(session['credentials'])
 
-    session['profile'] = service.users().getProfile(userId='me').execute()
-    
     # Redirect to index
     return redirect(url_for('index'))
 
@@ -90,10 +91,16 @@ def api_playgroud():
 
 @app.route("/inbox")
 def inbox():
-    show_label = request.args.get('show_label')
+    # Get user's email address
+    if not session['profile']:
+        session['profile'] = service.users().getProfile(userId='me').execute()
+    
+    label = request.args.get('label')
+    
     buildService(session['credentials'])
     # API Call
     message_id_dict = service.users().messages().list(userId='me', maxResults=25).execute()
+    
     # Construct list of `Message`s
     messages =  []
     for message in message_id_dict['messages']:
