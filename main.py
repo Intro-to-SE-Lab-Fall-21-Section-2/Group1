@@ -10,7 +10,7 @@ import auth
 from messages import Message
 
 # CONSTANTS
-SYSTEM_LABELS = ["CHAT", "SENT", "INBOX", "IMPORTANT", "TRASH", "DRAFT", "SPAM", "STARRED", "UNREAD"]
+SYSTEM_LABELS = ['CHAT', 'SENT', 'INBOX', 'IMPORTANT', 'TRASH', 'DRAFT', 'SPAM', 'STARRED', 'UNREAD']
 
 app = Flask(__name__)
 app.secret_key = "CHANGE ME IN PRODUCTION" # TODO Needed for session
@@ -83,7 +83,7 @@ def clear():
     else:
         return ("<p>No stored credentials<br><a href='/'>index</a></p>")
 
-@app.route("/playgroud")
+@app.route("/playground")
 def api_playgroud():
     labels = getLabels()
 
@@ -92,14 +92,19 @@ def api_playgroud():
 @app.route("/inbox")
 def inbox():
     # Get user's email address
-    if not session['profile']:
+    if not 'profile' in session:
+        buildService(session['credentials'])
         session['profile'] = service.users().getProfile(userId='me').execute()
     
-    label = request.args.get('label')
+    label_arg = request.args.get('label')
+    page = request.args.get('page')
+    query = request.args.get('q')
     
     buildService(session['credentials'])
-    # API Call
-    message_id_dict = service.users().messages().list(userId='me', maxResults=25).execute()
+    if label_arg:
+        message_id_dict = service.users().messages().list(userId='me', maxResults=25, labelIds = [label_arg]).execute()
+    else:
+        message_id_dict = service.users().messages().list(userId='me', maxResults=25).execute()
     
     # Construct list of `Message`s
     messages =  []
@@ -108,14 +113,15 @@ def inbox():
     
     # Remove default system label names from list of label names. These will be
     # hardcoded in the template
-    labels = []
-    for label in getLabels():
-        if label['name'] not in SYSTEM_LABELS:
-            if label['name']:
-                # Remove CATEGORY_ Prefix from some user labels
-                labels.append(label['name'].replace('CATEGORY_', '').capitalize())
     
-    return render_template("inboxread.html", messages=messages, labels=labels)
+    all_labels = getLabels()
+    user_labels = []
+    for label in all_labels:
+        if label['name'] not in SYSTEM_LABELS:
+            # Remove CATEGORY_ Prefix from some user labels
+            label['name'] = label['name'].replace('CATEGORY_', '').capitalize()
+            user_labels.append(label)
+    return render_template("inboxread.html", messages=messages, labels=user_labels)
 
 @app.route("/start")
 def star():

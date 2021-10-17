@@ -27,6 +27,10 @@
 				display: block;
 				border: 2px #40004D;
 				border-radius: 8px;
+
+				a{
+					color: white;
+				}
 			}
 
 	</style>
@@ -56,17 +60,17 @@
 			<!-- side navigation bar -->
 			
 			<div class = "sideNav">
-				Inbox  <br>
-				Unread <br>
-				Important <br>
-				Starred <br>
-				Chat <br>
-				Sent <br>
-				Draft <br>
-				Trash <br>
-				Spam <br>
+				<a href="/inbox?label=INBOX">Inbox  </a> <br> 
+				<a href="/inbox?label=UNREAD">Unread </a> <br> 
+				<a href="/inbox?label=IMPORTANT">Important </a> <br> 
+				<a href="/inbox?label=STARRED">Starred </a> <br> 
+				<a href="/inbox?label=CHAT">Chat </a> <br> 
+				<a href="/inbox?label=SENT">Sent </a> <br> 
+				<a href="/inbox?label=DRAFT">Draft </a> <br> 
+				<a href="/inbox?label=TRASH">Trash </a> <br> 
+				<a href="/inbox?label=SPAM">Spam </a> <br> 
 				{% for label in labels %}
-					{{ label }} <br>
+					<a href="/inbox?label={{ label['id'] }}"> {{ label['name'] }} </a> <br>
 				{% endfor %}
 			</div>
 		</div>
