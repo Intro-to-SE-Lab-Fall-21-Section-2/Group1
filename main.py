@@ -10,6 +10,7 @@ from googleapiclient.discovery import build
 
 import auth
 import email
+from email.mime.text import MIMEText
 
 # CONSTANTS
 SYSTEM_LABELS = ['CHAT', 'SENT', 'INBOX', 'IMPORTANT', 'TRASH', 'DRAFT', 'SPAM', 'STARRED', 'UNREAD']
@@ -69,7 +70,7 @@ def revoke():
     service = False
     revoke = auth.revokeAuth(session)
     if revoke:
-        return redirect(url_for('index'))
+        return redirect(url_for('clear'))
     else: 
         return ("<p>Error revoking access<br><a href='/'>index</a></p>" + 
                 "<p> You were probably not logged in. </p>")
@@ -98,16 +99,39 @@ def inbox():
         buildService(session['credentials'])
         session['profile'] = service.users().getProfile(userId='me').execute()
     
-    label_arg = request.args.get('label')
-    page = request.args.get('page')
-    query = request.args.get('q')
+    session['current_inbox'] = request.args.get('label')
+    session['current_page'] = request.args.get('page')
+    session['query'] = "" if not request.args.get('q') else request.args.get('q')
     
     buildService(session['credentials'])
 
-    if label_arg:
-        message_id_dict = service.users().messages().list(userId='me', maxResults=25, labelIds = [label_arg]).execute()
-    else:
-        message_id_dict = service.users().messages().list(userId='me', maxResults=25).execute()
+    if session['current_inbox']:
+        if session['current_page']:
+            if session['query']: # inbox, page, and query
+                message_id_dict = service.users().messages().list(userId='me', maxResults=25, labelIds = [session['current_inbox']], pageToken = session['current_page'], q = str(session['query'])).execute()
+            else: # inbox and page
+                # Call
+                message_id_dict = service.users().messages().list(userId='me', maxResults=25, labelIds = [session['current_inbox']], pageToken = session['current_page']).execute()
+        else:
+            if session['query']: # inbox and query
+                message_id_dict = service.users().messages().list(userId='me', maxResults=25, labelIds = [session['current_inbox']], q=str(session['query'])).execute()
+            else: # inbox only
+                # Call
+                message_id_dict = service.users().messages().list(userId='me', maxResults=25, labelIds = [session['current_inbox']]).execute()
+
+    else: # is not inbox
+        if session['current_page']:
+            if session['query']: # page and query
+                message_id_dict = service.users().messages().list(userId='me', maxResults=25, pageToke = session['current_page'], q=session['query']).execute()
+            else: # page
+                # Call
+                message_id_dict = service.users().messages().list(userId='me', maxResults=25, pageToke = session['current_page']).execute()
+        else: # is not page and inbox
+            if session['query']: # query
+                message_id_dict = service.users().messages().list(userId='me', maxResults=25, q=session['query']).execute()
+            else: # none
+                # Call
+                message_id_dict = service.users().messages().list(userId='me', maxResults=25).execute()
     
     # Construct list of `Message`s
     messages =  []
@@ -145,6 +169,33 @@ def view():
 
     return render_template("view.html", message=message_data)
 
+@app.route("/compose", methods=['GET', 'POST'])
+def compose():
+    # Populate some empty variables for compose
+    error = ""
+    message_parameters = {
+        'to': "",
+        'subject': "",
+        'body': ""
+    }
+    if request.method == 'POST':
+        message_parameters = request.form
+
+        # Print error on page        
+        if error:
+            return render_template('compose.html', message=message_parameters, error=error)
+        else: # Process message and send
+            message = MIMEText(str(message_parameters['body']))
+            message['to'] = str(message_parameters['to'])
+            message['from'] = str(session['profile'])
+            message['subject'] = str(message_parameters['subject'])
+            raw_message =  {'raw': base64.urlsafe_b64encode(message.as_bytes()).decode()}
+
+            buildService(session['credentials'])
+            service.users().messages().send(userId='me', body=raw_message).execute()
+            return redirect(url_for('inbox'))
+    else:    
+        return render_template('compose.html', message=message_parameters, error=error)
 
 @app.route("/start")
 def star():

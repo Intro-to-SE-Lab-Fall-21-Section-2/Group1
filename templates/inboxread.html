@@ -1,100 +1,115 @@
-<!DOCTYPE html>
-<html>
-	<head>
-		<title>Inbox View</title>
-		<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
-		<style>
+{% extends 'base.html' %}
 
-			.topBar{
-				padding: 2px;
-				background-color: #E0B0FF;
-				font-size: 10 px; 
-			}
-			
-			.sideNav{
-				background-color: #E0B0FF; 
-				float:left; 
-				float:bottom; 
-				width:15%;
-				height:100%; 	
-				position: relative;
-				left: 0;
-				bottom: 0;
-				
-				padding: 6px 6px 6px 32px;
-				font-size: 20px;
-				color: #FFFFFF;
-				display: block;
-				border: 2px #40004D;
-				border-radius: 8px;
+{% block title %}
+Inbox
+{% endblock title %}
 
-				a{
-					color: white;
-				}
-			}
+{% block head %}
 
-	</style>
-	</head>
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+<style>
+
+	.topBar{
+		padding: 2px;
+		background-color: #E0B0FF;
+		font-size: 10 px; 
+	}
 	
-	<body style = "background-image: url('.../projectg1/mosaicsoftersmall.jpg'); background-size: cover; ">
-	<!--header section-->
-		<div class = "topBar">
-			<p>
-				<div class = "usernameMain" style = "float: left;">
-					<h3 style = "color:white;">{{ session['profile']['emailAddress'] }}</h3> 
-				</div>
-				<div class = "searchBar" style = "text-align: right;" >
-					<input type="searchKey"  id="keyword" placeholder="Search" style = "font-size: 20px;"> 
-					<button type = "searchButton" style = "background-color: #9F2B68; border-color:  #702963; color: white; font-size: 20px;"> Search </button>
-				</div>
-			</p>
+	.sideNav{
+		background-color: #E0B0FF; 
+		float:left; 
+		float:bottom; 
+		width:15%;
+		height:100%; 	
+		position: relative;
+		left: 0;
+		bottom: 0;
+		
+		padding: 6px 6px 6px 32px;
+		font-size: 20px;
+		color: #FFFFFF;
+		display: block;
+		border: 2px #40004D;
+		border-radius: 8px;
+
+		a{
+			color: white;
+		}
+
+	}
+
+	body	{
+		background-image: url('.../projectg1/mosaicsoftersmall.jpg'); 
+		background-size: cover;
+	}
+</style>
+{% endblock head %}
+
+{% block body %}
+<!--header section-->
+<div class = "topBar">
+	<p>
+		<div class = "usernameMain" style = "float: left;">
+			<h3 style = "color:white;">{{ session['profile']['emailAddress'] }}</h3> 
 		</div>
-		
-		<!-- main body of the webpage -->
-		<div class = "main">
-		
-			<div class = "col-md-3">
-				<button type = "createButton" style = "background-color: #E0B0FF; border-color:  #702963; color: white; font-size: 45px;"> Create </button>
-			</div>
-		
-			<!-- side navigation bar -->
-			
-			<div class = "sideNav">
-				<a href="/inbox?label=INBOX">Inbox  </a> <br> 
-				<a href="/inbox?label=UNREAD">Unread </a> <br> 
-				<a href="/inbox?label=IMPORTANT">Important </a> <br> 
-				<a href="/inbox?label=STARRED">Starred </a> <br> 
-				<a href="/inbox?label=CHAT">Chat </a> <br> 
-				<a href="/inbox?label=SENT">Sent </a> <br> 
-				<a href="/inbox?label=DRAFT">Draft </a> <br> 
-				<a href="/inbox?label=TRASH">Trash </a> <br> 
-				<a href="/inbox?label=SPAM">Spam </a> <br> 
-				{% for label in labels %}
-					<a href="/inbox?label={{ label['id'] }}"> {{ label['name'] }} </a> <br>
-				{% endfor %}
-			</div>
+		<div class = "searchBar" style = "text-align: right;" >
+			<form action="/inbox" method="GET" id="query">
+				<input type="searchKey" name="q"  id="q" placeholder="Search" value="{{ session['query'] }}" style = "font-size: 20px;"> 
+				<button type = "submit" name="submit" form="query" value="submit" style = "background-color: #9F2B68; border-color:  #702963; color: white; font-size: 20px;"> 
+					Search 
+				</button>
+			</form>
 		</div>
-		
-		{% for message in messages %}
-		<a href="/view?id={{ message.id }}">
-			<div class = "cardEmail">
-				<div class="card">
-					<div class="col-md-9" >
-						<div class = "title" style="font-size: medium; font-weight: lighter;">
-							{{ message['From'] }}
-						</div>
-						<div class = "title" style="font-size: medium; font-weight: bold;">
-							{{ message['Subject'] }}
-						</div>
-						<div class = "title" style="font-size: small;">
-							{{ message['snippet'] }}...
-						</div>
-					</div>
-				</div>
-			<br>
-			</div>
-		</a>
+	</p>
+</div>
+
+<!-- main body of the webpage -->
+<div class = "main">
+
+	<div class = "col-md-3">
+		<button type = "createButton" style = "background-color: #E0B0FF; border-color:  #702963; color: white; font-size: 45px;">
+		<a href="/compose">Create</a>
+		</button>
+	</div>
+
+	<!-- side navigation bar - Folders -->
+	
+	<div class = "sideNav">
+		<a href="/inbox?label=INBOX">Inbox</a> <br> 
+		<a href="/inbox?label=UNREAD">Unread </a> <br> 
+		<a href="/inbox?label=IMPORTANT">Important </a> <br> 
+		<a href="/inbox?label=STARRED">Starred </a> <br> 
+		<a href="/inbox?label=CHAT">Chat </a> <br> 
+		<a href="/inbox?label=SENT">Sent </a> <br> 
+		<a href="/inbox?label=DRAFT">Draft </a> <br> 
+		<a href="/inbox?label=TRASH">Trash </a> <br> 
+		<a href="/inbox?label=SPAM">Spam </a> <br> 
+		{% for label in labels %}
+			<a href="/inbox?label={{ label['id'] }}"> {{ label['name'] }} </a> <br>
 		{% endfor %}
-		
-	</body>
-</html>
+	</div>
+</div>
+
+<!-- Message card list-->
+{% for message in messages %}
+<a href="/view?id={{ message.id }}">
+	<div class = "cardEmail">
+		<div class="card">
+			<div class="col-md-9" >
+				<div class = "title" style="font-size: medium; font-weight: lighter;">
+					{{ message['From'] }}
+				</div>
+				<div class = "title" style="font-size: medium; font-weight: bold;">
+					{{ message['Subject'] }}
+				</div>
+				<div class = "title" style="font-size: small;">
+					{{ message['snippet'] }}...
+				</div>
+			</div>
+		</div>
+	<br>
+	</div>
+</a>
+{% endfor %}
+
+{% endblock body %}
