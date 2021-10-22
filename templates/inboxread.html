@@ -53,6 +53,7 @@ Inbox
 			<h3 style = "color:white;">{{ session['profile']['emailAddress'] }}</h3> 
 		</div>
 		<div class = "searchBar" style = "text-align: right;" >
+			<a href="/clear"> Logout </a>
 			<form action="/inbox" method="GET" id="query">
 				<input type="searchKey" name="q"  id="q" placeholder="Search" value="{{ session['query'] }}" style = "font-size: 20px;"> 
 				<button type = "submit" name="submit" form="query" value="submit" style = "background-color: #9F2B68; border-color:  #702963; color: white; font-size: 20px;"> 
