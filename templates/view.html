@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ message['Subject'] }}{% endblock title %}
+
+{% block head %}
+
+{% endblock head %}
+
+{% block body %}
+<h1>{{message['Subject']}}</h1>
+<h2>{{message['From']}}</h2>
+<h3>{{message['Date']}} </h3>
+<pre> {{ message['Body'] }} </pre><br>
+
+
+<form action="/compose" method="POST" enctype="multipart/form-data">
+
+    <input type="hidden" id="subject" name="subject", value = "FWD: {{ message['Subject'] }}"><br>
+    Forward to: <input type="email" id="to" name="to">
+    <input type="hidden" id="body" name="body", value = "ORIGINAL AUTHOR: {{ message['From'] }} \ {{ message['Body'] }}"><br>
+    <input type ="file" name="attachment" id="attachment">
+    <input type="submit" name="submit" value="Send">
+
+</form>
+{% endblock body %}

@@ -1,4 +1,4 @@
+Email Client.code-workspace
 __pycache__
-.vscode
-templates/google_signin.html
-workspace.code-workspace
+uploads/*
+.vscode/

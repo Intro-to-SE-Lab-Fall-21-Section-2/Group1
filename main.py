@@ -1,18 +1,26 @@
 # Main application script
 
-from inspect import getmembers
+import base64
 import os
 from flask import Flask, render_template, redirect, session, url_for, request
 from google.oauth2 import credentials
 from googleapiclient.discovery import build
 
 import auth
-from messages import Message
+import email
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from email.mime.image import MIMEImage
+from email.mime.audio import MIMEAudio
+from email.mime.base import MIMEBase
+import mimetypes
 
 # CONSTANTS
-SYSTEM_LABELS = ["CHAT", "SENT", "INBOX", "IMPORTANT", "TRASH", "DRAFT", "SPAM", "STARRED", "UNREAD"]
+SYSTEM_LABELS = ['CHAT', 'SENT', 'INBOX', 'IMPORTANT', 'TRASH', 'DRAFT', 'SPAM', 'STARRED', 'UNREAD']
+UPLOAD_FOLDER = "./uploads/"
 
 app = Flask(__name__)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.secret_key = "CHANGE ME IN PRODUCTION" # TODO Needed for session
 service = False
 
@@ -67,7 +75,7 @@ def revoke():
     service = False
     revoke = auth.revokeAuth(session)
     if revoke:
-        return redirect(url_for('index'))
+        return redirect(url_for('clear'))
     else: 
         return ("<p>Error revoking access<br><a href='/'>index</a></p>" + 
                 "<p> You were probably not logged in. </p>")
@@ -83,7 +91,7 @@ def clear():
     else:
         return ("<p>No stored credentials<br><a href='/'>index</a></p>")
 
-@app.route("/playgroud")
+@app.route("/playground")
 def api_playgroud():
     labels = getLabels()
 
@@ -92,30 +100,147 @@ def api_playgroud():
 @app.route("/inbox")
 def inbox():
     # Get user's email address
-    if not session['profile']:
+    if not 'profile' in session:
+        buildService(session['credentials'])
         session['profile'] = service.users().getProfile(userId='me').execute()
     
-    label = request.args.get('label')
+    session['current_inbox'] = request.args.get('label')
+    session['current_page'] = request.args.get('page')
+    session['query'] = "" if not request.args.get('q') else request.args.get('q')
     
     buildService(session['credentials'])
-    # API Call
-    message_id_dict = service.users().messages().list(userId='me', maxResults=25).execute()
+
+    if session['current_inbox']:
+        if session['current_page']:
+            if session['query']: # inbox, page, and query
+                message_id_dict = service.users().messages().list(userId='me', maxResults=25, labelIds = [session['current_inbox']], pageToken = session['current_page'], q = str(session['query'])).execute()
+            else: # inbox and page
+                # Call
+                message_id_dict = service.users().messages().list(userId='me', maxResults=25, labelIds = [session['current_inbox']], pageToken = session['current_page']).execute()
+        else:
+            if session['query']: # inbox and query
+                message_id_dict = service.users().messages().list(userId='me', maxResults=25, labelIds = [session['current_inbox']], q=str(session['query'])).execute()
+            else: # inbox only
+                # Call
+                message_id_dict = service.users().messages().list(userId='me', maxResults=25, labelIds = [session['current_inbox']]).execute()
+
+    else: # is not inbox
+        if session['current_page']:
+            if session['query']: # page and query
+                message_id_dict = service.users().messages().list(userId='me', maxResults=25, pageToke = session['current_page'], q=session['query']).execute()
+            else: # page
+                # Call
+                message_id_dict = service.users().messages().list(userId='me', maxResults=25, pageToke = session['current_page']).execute()
+        else: # is not page and inbox
+            if session['query']: # query
+                message_id_dict = service.users().messages().list(userId='me', maxResults=25, q=session['query']).execute()
+            else: # none
+                # Call
+                message_id_dict = service.users().messages().list(userId='me', maxResults=25).execute()
     
     # Construct list of `Message`s
     messages =  []
     for message in message_id_dict['messages']:
-        messages.append(Message(message['id'], service))
+        messages.append(getMessageData(message['id']))
     
     # Remove default system label names from list of label names. These will be
     # hardcoded in the template
-    labels = []
-    for label in getLabels():
-        if label['name'] not in SYSTEM_LABELS:
-            if label['name']:
-                # Remove CATEGORY_ Prefix from some user labels
-                labels.append(label['name'].replace('CATEGORY_', '').capitalize())
     
-    return render_template("inboxread.html", messages=messages, labels=labels)
+    all_labels = getLabels()
+    user_labels = []
+    for label in all_labels:
+        if label['name'] not in SYSTEM_LABELS:
+            # Remove CATEGORY_ Prefix from some user labels
+            label['name'] = label['name'].replace('CATEGORY_', '').capitalize()
+            user_labels.append(label)
+    return render_template("inboxread.html", messages=messages, labels=user_labels)
+
+@app.route("/view")
+def view():
+
+    message_id = request.args.get('id')
+
+    buildService(session['credentials'])
+
+    message = getFullMessage(message_id)
+
+    body = message.get_body(('plain',))
+    if body:
+        body = body.get_content()
+    print(body)
+    
+    message_data = getMessageData(message_id)
+    message_data['Body'] = body
+
+    return render_template("view.html", message=message_data)
+
+@app.route("/compose", methods=['GET', 'POST'])
+def compose():
+    # Populate some empty variables for compose
+    error = ""
+    message_parameters = {
+        'to': "",
+        'Subject': "",
+        'body': ""
+    }
+    if request.method == 'POST':
+        message_parameters = request.form
+
+        # Print error on page        
+        if error:
+            return render_template('compose.html', message=message_parameters, error=error)
+        else: # Process message and send
+
+            if request.files.get('attachment').filename == '': # No attachment
+                message = MIMEText(str(message_parameters['body']))
+                message['to'] = str(message_parameters['to'])
+                message['from'] = str(session['profile'])
+                message['subject'] = str(message_parameters['Subject'])
+                raw_message =  {'raw': base64.urlsafe_b64encode(message.as_bytes()).decode()}
+            
+            else:
+                attachment = request.files['attachment']
+                attachment.save(os.path.join(app.config['UPLOAD_FOLDER'], attachment.filename))
+                attachment_name = os.path.join(app.config['UPLOAD_FOLDER'], attachment.filename)
+
+                message = MIMEMultipart()
+                message['to'] = str(message_parameters['to'])
+                message['from'] = str(session['profile'])
+                message['subject'] = str(message_parameters['Subject'])
+
+                content_type, encoding = mimetypes.guess_type(attachment_name)
+
+                if content_type is None or encoding is not None:
+                    content_type = 'application/octet-stream'
+                main_type, sub_type = content_type.split('/', 1)
+                if main_type == 'text':
+                    fp = open(attachment_name, 'rb')
+                    msg = MIMEText(fp.read(), _subtype=sub_type)
+                    fp.close()
+                elif main_type == 'image':
+                    fp = open(attachment_name, 'rb')
+                    msg = MIMEImage(fp.read(), _subtype=sub_type)
+                    fp.close()
+                elif main_type == 'audio':
+                    fp = open(attachment_name, 'rb')
+                    msg = MIMEAudio(fp.read(), _subtype=sub_type)
+                    fp.close()
+                else:
+                    fp = open(attachment_name, 'rb')
+                    msg = MIMEBase(main_type, sub_type)
+                    msg.set_payload(fp.read())
+                    fp.close()
+                filename = os.path.basename(attachment_name)
+                msg.add_header('Content-Disposition', 'attachment', filename=filename)
+                message.attach(msg)
+            
+            raw_message =  {'raw': base64.urlsafe_b64encode(message.as_bytes()).decode()}
+
+            buildService(session['credentials'])
+            service.users().messages().send(userId='me', body=raw_message).execute()
+            return redirect(url_for('inbox'))
+    else:    
+        return render_template('compose.html', message=message_parameters, error=error)
 
 @app.route("/start")
 def star():
@@ -166,7 +291,6 @@ def buildService(session_creds):
     print("main.py: buildService(): Building new service resource for API")
     # Create credentials object from credentials dict stored in session
     creds = credentials.Credentials(**session_creds)
-
     # Build service object for API
     service = build(
         auth.API_SERVICE_NAME,
@@ -183,6 +307,39 @@ def getLabels():
     labels = results.get('labels', [])
     return labels
 
+def getMessageData(message_id):
+    message = {}
+    message_data = service.users().messages().get(userId='me', id=message_id).execute()
+    
+    message['id'] = message_data['id']
+    message['threadId'] = message_data['threadId']
+    message['labelIds'] = message_data['labelIds']
+    message['snippet'] = message_data['snippet']
+
+    headers = headersToDict(message_data['payload']['headers'])
+
+    message['From'] = headers.get('From')
+    message['Subject'] = headers.get('Subject') or headers.get('SUBJECT')
+    message['Date'] = headers.get('Date')
+
+    return message
+
+def getFullMessage(message_id):
+    # Get raw mime data
+    message_raw = service.users().messages().get(userId='me',id=message_id,format='raw').execute()
+
+    # decode raw body data
+    message_string = base64.urlsafe_b64decode(message_raw.get('raw').encode('ASCII'))
+
+    # Create mime email object
+    mime_msg = email.message_from_bytes(message_string, policy=email.policy.default)
+    return mime_msg
+
+def headersToDict(headers):
+    header_dict = {}
+    for header in headers:
+        header_dict[header['name']] = header['value']
+    return header_dict
 
 # Flask preferences
 if __name__ == "__main__":
