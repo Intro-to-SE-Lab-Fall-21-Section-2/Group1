@@ -1,4 +1,6 @@
+
 Email Client.code-workspace
 __pycache__
 uploads/*
-.vscode/
+.vscode
+
