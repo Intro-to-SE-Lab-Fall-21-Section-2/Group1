@@ -7,7 +7,7 @@ import google.oauth2.credentials
 import google_auth_oauthlib.flow
 
 CLIENT_SECRETS_FILE_LOC = "../.secret/client_secret.json"
-SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']
+SCOPES = ['https://www.googleapis.com/auth/gmail.readonly', 'https://www.googleapis.com/auth/gmail.send']
 API_SERVICE_NAME = 'gmail'
 API_VERSION = 'v1'
 passthrough = "test" # This is used for something or rather

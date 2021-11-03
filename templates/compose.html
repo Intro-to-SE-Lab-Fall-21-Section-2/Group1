@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+
+{% block title %}
+Compose
+{% endblock title %}
+
+{% block body %}
+
+<form action="/compose" method="POST" enctype="multipart/form-data">
+
+    <p style="color: red">{{ error }}</p>
+    <span>Subject:<input type="text" id="Subject" name="Subject", value = "{{ message['subject'] }}"></span><br>
+    <span>To:<input type="email" id="to" name="to", value = "{{ message['to'] }}"></span><br>
+    <span><textarea id="body" name="body", value = "{{ message['body'] }}"></textarea></span><br>
+    <input type ="file" name="attachment" id="attachment">
+    <input type="submit" name="submit" value="Send">
+
+</form>
+
+{% endblock body %}
+
