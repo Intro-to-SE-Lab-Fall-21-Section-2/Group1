@@ -94,7 +94,7 @@ def clear():
         return redirect(url_for('index'))
     else:
         return ("<p>No stored credentials<br><a href='/'>index</a></p>")
-
+    
 
     labels = getLabels()
 
