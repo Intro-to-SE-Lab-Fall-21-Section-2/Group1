@@ -1,10 +1,14 @@
 # Main application script
 
 import base64
+from logging import error
 import os
 from flask import Flask, render_template, redirect, session, url_for, request
 from google.oauth2 import credentials
-from googleapiclient.discovery import build
+from googleapiclient.discovery import build 
+from googleapiclient import errors
+from requests.sessions import Request
+
 
 import auth
 import email
@@ -104,48 +108,59 @@ def inbox():
         buildService(session['credentials'])
         session['profile'] = service.users().getProfile(userId='me').execute()
     
-    session['current_inbox'] = request.args.get('label')
-    session['current_page'] = request.args.get('page')
+    session['current_inbox'] = "INBOX" if not request.args.get('label') else request.args.get('label')
+    session['current_page'] = '' if not request.args.get('page') else request.args.get('page')
     session['query'] = "" if not request.args.get('q') else request.args.get('q')
     
     buildService(session['credentials'])
 
-    if session['current_inbox']:
-        if session['current_page']:
-            if session['query']: # inbox, page, and query
-                message_id_dict = service.users().messages().list(userId='me', maxResults=25, labelIds = [session['current_inbox']], pageToken = session['current_page'], q = str(session['query'])).execute()
-            else: # inbox and page
-                # Call
-                message_id_dict = service.users().messages().list(userId='me', maxResults=25, labelIds = [session['current_inbox']], pageToken = session['current_page']).execute()
-        else:
-            if session['query']: # inbox and query
-                message_id_dict = service.users().messages().list(userId='me', maxResults=25, labelIds = [session['current_inbox']], q=str(session['query'])).execute()
-            else: # inbox only
-                # Call
-                message_id_dict = service.users().messages().list(userId='me', maxResults=25, labelIds = [session['current_inbox']]).execute()
+    try:
+        if session['current_inbox']:
+            if session['current_page']:
+                if session['query']: # inbox, page, and query
+                    message_id_dict = service.users().messages().list(userId='me', maxResults=25, labelIds = [session['current_inbox']], pageToken = session['current_page'], q = str(session['query'])).execute()
+                else: # inbox and page
+                    # Call
+                    message_id_dict = service.users().messages().list(userId='me', maxResults=25, labelIds = [session['current_inbox']], pageToken = session['current_page']).execute()
+            else:
+                if session['query']: # inbox and query
+                    message_id_dict = service.users().messages().list(userId='me', maxResults=25, labelIds = [session['current_inbox']], q=str(session['query'])).execute()
+                else: # inbox only
+                    # Call
+                    message_id_dict = service.users().messages().list(userId='me', maxResults=25, labelIds = [session['current_inbox']]).execute()
 
-    else: # is not inbox
-        if session['current_page']:
-            if session['query']: # page and query
-                message_id_dict = service.users().messages().list(userId='me', maxResults=25, pageToke = session['current_page'], q=session['query']).execute()
-            else: # page
-                # Call
-                message_id_dict = service.users().messages().list(userId='me', maxResults=25, pageToke = session['current_page']).execute()
-        else: # is not page and inbox
-            if session['query']: # query
-                message_id_dict = service.users().messages().list(userId='me', maxResults=25, q=session['query']).execute()
-            else: # none
-                # Call
-                message_id_dict = service.users().messages().list(userId='me', maxResults=25).execute()
+        else: # is not inbox
+            if session['current_page']:
+                if session['query']: # page and query
+                    message_id_dict = service.users().messages().list(userId='me', maxResults=25, pageToke = session['current_page'], q=session['query']).execute()
+                else: # page
+                    # Call
+                    message_id_dict = service.users().messages().list(userId='me', maxResults=25, pageToke = session['current_page']).execute()
+            else: # is not page and inbox
+                if session['query']: # query
+                    message_id_dict = service.users().messages().list(userId='me', maxResults=25, q=session['query']).execute()
+                else: # none
+                    # Call
+                    message_id_dict = service.users().messages().list(userId='me', maxResults=25).execute()
+                    
+    except errors.HttpError as error:
+        return render_template("error.html", error)
     
     # Construct list of `Message`s
     messages =  []
-    for message in message_id_dict['messages']:
-        messages.append(getMessageData(message['id']))
+    if message_id_dict['resultSizeEstimate'] == 0: # no results returned
+        messages.append( {
+            'Subject' : 'No results for ' + session['query'],
+            'From'  : '',
+            'snippet' : ''
+        } )
+    else: # business as usual
+        session['next_page'] = message_id_dict.get('nextPageToken') if message_id_dict.get('nextPageToken') else ''
+        for message in message_id_dict.get("messages"):
+            messages.append(getMessageData(message['id']))
     
     # Remove default system label names from list of label names. These will be
     # hardcoded in the template
-    
     all_labels = getLabels()
     user_labels = []
     for label in all_labels:
@@ -153,7 +168,7 @@ def inbox():
             # Remove CATEGORY_ Prefix from some user labels
             label['name'] = label['name'].replace('CATEGORY_', '').capitalize()
             user_labels.append(label)
-    return render_template("inboxread.html", messages=messages, labels=user_labels)
+    return render_template("inbox.html", messages=messages, labels=user_labels)
 
 @app.route("/view")
 def view():
@@ -172,7 +187,7 @@ def view():
     message_data = getMessageData(message_id)
     message_data['Body'] = body
 
-    return render_template("view.html", message=message_data)
+    return render_template("view.html", message=message_data, labels=getLabels())
 
 @app.route("/compose", methods=['GET', 'POST'])
 def compose():
@@ -185,6 +200,7 @@ def compose():
     }
     if request.method == 'POST':
         message_parameters = request.form
+        print(message_parameters)
 
         # Print error on page        
         if error:
@@ -194,7 +210,7 @@ def compose():
             if request.files.get('attachment').filename == '': # No attachment
                 message = MIMEText(str(message_parameters['body']))
                 message['to'] = str(message_parameters['to'])
-                message['from'] = str(session['profile'])
+                message['from'] = str(session['profile']['emailAddress'])
                 message['subject'] = str(message_parameters['Subject'])
                 raw_message =  {'raw': base64.urlsafe_b64encode(message.as_bytes()).decode()}
             
@@ -203,10 +219,10 @@ def compose():
                 attachment.save(os.path.join(app.config['UPLOAD_FOLDER'], attachment.filename))
                 attachment_name = os.path.join(app.config['UPLOAD_FOLDER'], attachment.filename)
 
-                message = MIMEMultipart()
+                message = MIMEMultipart('aternative')
                 message['to'] = str(message_parameters['to'])
-                message['from'] = str(session['profile'])
-                message['subject'] = str(message_parameters['Subject'])
+                message['from'] = str(session['profile']['emailAddress'] )
+                message['subject'] = str(message_parameters.get('Subject'))
 
                 content_type, encoding = mimetypes.guess_type(attachment_name)
 
@@ -232,6 +248,8 @@ def compose():
                     fp.close()
                 filename = os.path.basename(attachment_name)
                 msg.add_header('Content-Disposition', 'attachment', filename=filename)
+                
+                message.attach(MIMEText(str(message_parameters['body'])))
                 message.attach(msg)
             
             raw_message =  {'raw': base64.urlsafe_b64encode(message.as_bytes()).decode()}
@@ -240,43 +258,7 @@ def compose():
             service.users().messages().send(userId='me', body=raw_message).execute()
             return redirect(url_for('inbox'))
     else:    
-        return render_template('compose.html', message=message_parameters, error=error)
-
-@app.route("/start")
-def star():
-    return render_template('startPage.html')
-
-@app.route("/login")
-def login():
-    return render_template('loginpage.html')
-
-@app.route("/register")
-def register():
-    return render_template('emailCreator.html')
-
-@app.route("/inbox_list")
-def inboxList():
-    return render_template('inboxlist.html')
-
-@app.route("/drafts_list")
-def draftsList():
-    return render_template('draftslist.html')
-
-@app.route("/edit_window")
-def editWindow():
-    return render_template('editwindow.html')
-
-@app.route("/inbox_read")
-def inboxRead():
-    return render_template('inboxread.html')
-
-@app.route("/outbox_list")
-def outboxList():
-    return render_template('outboxlist.html')
-
-@app.route("/outbox_read")
-def outboxRead():
-    return render_template('outboxread.html')
+        return render_template('compose.html', message=message_parameters, error=error, labels=getLabels())
 
 @app.route("/signup")
 def signUp():
@@ -285,25 +267,36 @@ def signUp():
 # API Methods
 def buildService(session_creds):
     global service
+        
     if service:
         print("main.py: buildService(): buildService() called but service already created")
         return 
     print("main.py: buildService(): Building new service resource for API")
     # Create credentials object from credentials dict stored in session
-    creds = credentials.Credentials(**session_creds)
-    # Build service object for API
-    service = build(
-        auth.API_SERVICE_NAME,
-        auth.API_VERSION, 
-        credentials = creds
-    )
-    print("main.py: buildService(): New service resource built")
+    try:
+        creds = credentials.Credentials(**session_creds)
+    
+        # Build service object for API
+        service = build(
+            auth.API_SERVICE_NAME,
+            auth.API_VERSION, 
+            credentials = creds
+        )
+        print("main.py: buildService(): New service resource built")
+    
+    except:
+        redirect( url_for('clear') )
 
 def getLabels():
     # Returns array of labels
     # API Call
     buildService(session['credentials'])
-    results = service.users().labels().list(userId='me').execute()
+    
+    try:
+        results = service.users().labels().list(userId='me').execute()
+    except errors.HttpError as error:
+        return 0
+        
     labels = results.get('labels', [])
     return labels
 
@@ -318,15 +311,18 @@ def getMessageData(message_id):
 
     headers = headersToDict(message_data['payload']['headers'])
 
-    message['From'] = headers.get('From')
-    message['Subject'] = headers.get('Subject') or headers.get('SUBJECT')
+    message['From'] = headers.get('From') or headers.get('from') or headers.get('FROM')
+    message['Subject'] = headers.get('Subject') or headers.get('SUBJECT') or headers.get('subject')
     message['Date'] = headers.get('Date')
 
     return message
 
 def getFullMessage(message_id):
     # Get raw mime data
-    message_raw = service.users().messages().get(userId='me',id=message_id,format='raw').execute()
+    try:
+        message_raw = service.users().messages().get(userId='me',id=message_id,format='raw').execute()
+    except errors.HttpError as error:
+        render_template('error.html', error)
 
     # decode raw body data
     message_string = base64.urlsafe_b64decode(message_raw.get('raw').encode('ASCII'))
