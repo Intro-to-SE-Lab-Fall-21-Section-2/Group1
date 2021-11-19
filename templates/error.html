@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+
+{% block title %}Server Error{% endblock title %}
+
+{% block head %}
+
+{% endblock head %}
+
+{% block body%}
+<h1> HTTP Request Error </h1>
+<p>{{ error }}</p>
+<a href="/clear">Log out</a>
+{% endblock body %}

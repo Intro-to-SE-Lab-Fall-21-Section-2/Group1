@@ -1,25 +1,145 @@
-{% extends 'base.html' %}
+<!DOCTYPE html>
+<html>
+<title>W3.CSS Template</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Raleway">
+<style>
+body,h1,h2,h3,h4,h5 {font-family: "Raleway", sans-serif}
+pre {
+    white-space: pre-wrap;       /* Since CSS 2.1 */
+    white-space: -moz-pre-wrap;  /* Mozilla, since 1999 */
+    white-space: -pre-wrap;      /* Opera 4-6 */
+    white-space: -o-pre-wrap;    /* Opera 7 */
+    word-wrap: break-word;       /* Internet Explorer 5.5+ */
+}
+a {text-decoration:none}
+</style>
+<body class="w3-light-grey">
 
-{% block title %}{{ message['Subject'] }}{% endblock title %}
+<!-- w3-content defines a container for fixed size centered content, 
+and is wrapped around the whole page content, except for the footer in this example -->
+<div class="w3-content" style="max-width:1400px">
 
-{% block head %}
+<!-- Header -->
+<header class="w3-container w3-center w3-padding-32"> 
+  <h1><b>{{ message['Subject'] }}</b></h1>
+</header>
 
-{% endblock head %}
+<!-- Grid -->
+<div class="w3-row">
 
-{% block body %}
-<h1>{{message['Subject']}}</h1>
-<h2>{{message['From']}}</h2>
-<h3>{{message['Date']}} </h3>
-<pre> {{ message['Body'] }} </pre><br>
+<div class="w3-col l9 s12">
+  <div class="w3-card-4 w3-margin w3-white">
+    <div class="w3-container">
+      <h3><b>{{message['From']}}</b></h3>
+      <h5>{{ message['Date'] }}</h5>
+    </div>
 
+    <div class="w3-container">
+      <pre>{{ message['Body'] }}</pre>
+    </div>
+  </div>
+  <hr>
+</div>
 
-<form action="/compose" method="POST" enctype="multipart/form-data">
+<!-- Introduction menu -->
+<div class="w3-col l3">
+  <!-- About Card -->
+  <div class="w3-card w3-margin w3-hoverable w3-margin-top">
+    <div class="w3-container w3-white">
+        <form action="/compose" method="POST" enctype="multipart/form-data">
 
-    <input type="hidden" id="subject" name="subject", value = "FWD: {{ message['Subject'] }}"><br>
-    Forward to: <input type="email" id="to" name="to">
-    <input type="hidden" id="body" name="body", value = "ORIGINAL AUTHOR: {{ message['From'] }} \ {{ message['Body'] }}"><br>
-    <input type ="file" name="attachment" id="attachment">
-    <input type="submit" name="submit" value="Send">
+            <input type="hidden" id="Subject" name="Subject", value = "FWD: {{ message['Subject'] }}"><br>
+            Forward to: <input type="email" id="to" name="to">
+            <input type="hidden" id="body" name="body", value = "ORIGINAL AUTHOR: {{ message['From'] }} \ {{ message['Body'] }}"><br>
+            <input type ="file" name="attachment" id="attachment">
+            <input type="submit" name="submit" value="Send">
+        
+        </form>
+    </div>
+  </div>
 
-</form>
-{% endblock body %}
+  <!-- Sidebar menu -->
+    <div class="w3-card w3-margin w3-margin-top" style:"text-align: center;">
+        <center><a href="/compose">Send New Email</a></center>
+    </div>
+            <!-- About Card -->
+            <div class="w3-card w3-margin w3-margin-top">
+                <div class="w3-container w3-white">
+                    <h4><b>{{ session['profile']['emailAddress'] }}</b></h4>
+                </div>
+                <div class="w3-container">
+                    <form action="/inbox" method="GET" id="query">
+				    <span><input type="searchKey" name="q"  id="q" placeholder="Search" value="{{ session['query'] }}" > </span>
+				    <button type = "submit" name="submit" form="query" value="submit"> 
+					Search 
+				    </button>
+			</form>
+                </div>
+                <div class="w3-container wr-white">
+                    <a href="/clear"><h6>Logout</h6></a>
+                    <a href="/revoke"><h6>Revoke</h6></a>
+                </div>
+            </div>
+        
+    
+        <!-- Folders -->
+        <div class="w3-card w3-margin">
+            <div class="w3-container w3-padding">
+                <h4>Folders</h4>
+            </div>
+            <ul class="w3-ul w3-hoverable w3-white">
+                <li class="w3-padding-16">
+                    <a href="/inbox?label=INBOX"><span class="w3-large">Inbox</span></a><br>
+                </li>
+                <li class="w3-padding-16">
+                    <a href="/inbox?label=UNREAD"><span class="w3-large">Unread</span></a><br>
+                </li> 
+                <li class="w3-padding-16">
+                    <a href="/inbox?label=IMPORTANT"><span class="w3-large">Important</span></a><br>
+                </li>   
+                <li class="w3-padding-16">
+                    <a href="/inbox?label=STARRED"><span class="w3-large">Starred</span></a><br>
+                </li> 
+                <li class="w3-padding-16">
+                    <a href="/inbox?label=CHAT"><span class="w3-large">Chat</span></a><br>
+                </li>  
+                <li class="w3-padding-16">
+                    <a href="/inbox?label=SENT"><span class="w3-large">Sent</span></a><br>
+                </li>  
+                <li class="w3-padding-16">
+                    <a href="/inbox?label=DRAFT"><span class="w3-large">Draft</span></a><br>
+                </li>
+                <li class="w3-padding-16">
+                    <a href="/inbox?label=TRASH"><span class="w3-large">Trash</span></a><br>
+                </li>  
+                <li class="w3-padding-16">
+                    <a href="/inbox?label=SPAM"><span class="w3-large">Spam</span></a><br>
+                </li>
+                {% for label in labels %}
+                    <li class="w3-padding-16">
+                        <a href="/inbox?label={{ label['id'] }}"> <span class="w3-large">{{ label['name'] }}</span> </a> <br>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+        <hr> 
+  
+<!-- END Introduction Menu -->
+</div>
+
+<!-- END GRID -->
+</div><br>
+
+<!-- END w3-content -->
+</div>
+
+<!-- Footer -->
+<footer class="w3-container w3-dark-grey w3-padding-32 w3-margin-top">
+  <p>Powered by <a href="https://www.w3schools.com/w3css/default.asp" target="_blank">w3.css</a></p>
+</footer>
+
+</body>
+</html>
