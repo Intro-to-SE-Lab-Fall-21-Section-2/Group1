@@ -95,8 +95,7 @@ def clear():
     else:
         return ("<p>No stored credentials<br><a href='/'>index</a></p>")
 
-@app.route("/playground")
-def api_playgroud():
+
     labels = getLabels()
 
     return render_template('api_playground.html', labels=labels)
@@ -259,10 +258,6 @@ def compose():
             return redirect(url_for('inbox'))
     else:    
         return render_template('compose.html', message=message_parameters, error=error, labels=getLabels())
-
-@app.route("/signup")
-def signUp():
-    return render_template('signup.html')
 
 # API Methods
 def buildService(session_creds):
