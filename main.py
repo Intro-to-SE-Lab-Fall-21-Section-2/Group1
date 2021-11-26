@@ -3,7 +3,7 @@
 import base64
 from logging import error
 import os
-from flask import Flask, render_template, redirect, session, url_for, request
+from flask import Flask, app, render_template, redirect, session, url_for, request
 from google.oauth2 import credentials
 from googleapiclient.discovery import build 
 from googleapiclient import errors
@@ -23,9 +23,14 @@ import mimetypes
 SYSTEM_LABELS = ['CHAT', 'SENT', 'INBOX', 'IMPORTANT', 'TRASH', 'DRAFT', 'SPAM', 'STARRED', 'UNREAD']
 UPLOAD_FOLDER = "./uploads/"
 
-app = Flask(__name__)
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-app.secret_key = "CHANGE ME IN PRODUCTION" # TODO Needed for session
+def create_app():
+    global app
+    app = Flask(__name__)
+    app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+    app.secret_key = "CHANGE ME IN PRODUCTION" # TODO Needed for session
+
+create_app()
+
 service = False
 
 @app.route("/")
@@ -48,6 +53,9 @@ def authorize():
                                         _external=True))
     # Store the state so the callback can verify the auth server response.
     session['state'] = state
+    
+    # Verify authentication oauth2callback is successful
+    assert type(session['state']) is not None
 
     # Eventually redirects to /oauth2callback
     return redirect(authorization_url)
@@ -95,11 +103,6 @@ def clear():
     else:
         return ("<p>No stored credentials<br><a href='/'>index</a></p>")
     
-
-    labels = getLabels()
-
-    return render_template('api_playground.html', labels=labels)
-
 @app.route("/inbox")
 def inbox():
     # Get user's email address
@@ -260,16 +263,25 @@ def compose():
         return render_template('compose.html', message=message_parameters, error=error, labels=getLabels())
 
 # API Methods
-def buildService(session_creds):
+def buildService(session_creds): 
     global service
-        
+    
+    # Test case that fails if session_creds is uninitialized
+    assert type(session_creds) is not None
+    
     if service:
         print("main.py: buildService(): buildService() called but service already created")
         return 
     print("main.py: buildService(): Building new service resource for API")
+    
+    print("____________________________________________________________________\nTest case 1\n")
+    print("main.py: buildService(): Verify API authorization endpoint suceeds")
+    print("Failure indicates critival authentication issue")
+    
     # Create credentials object from credentials dict stored in session
     try:
         creds = credentials.Credentials(**session_creds)
+    
     
         # Build service object for API
         service = build(
@@ -278,8 +290,16 @@ def buildService(session_creds):
             credentials = creds
         )
         print("main.py: buildService(): New service resource built")
+        print("Success !")
+        print("Authentication successful, new service built, API access authorized")
     
     except:
+        
+        print("Failure !")
+        print("Authentication unsuccesfful, API access denied (?)")
+        print("Probable authentication error")
+        print("Exiting with error")
+        exit()
         redirect( url_for('clear') )
 
 def getLabels():
@@ -291,13 +311,41 @@ def getLabels():
         results = service.users().labels().list(userId='me').execute()
     except errors.HttpError as error:
         return 0
-        
+
+    print("____________________________________________________________________\nTest case 2\n")
+    print("main.py: getLabels(): Verify HTTP Request Response for label data is not empty")
+    print("Failure indicates authentication/parameter issue")
+    if type(results) is dict:
+        print("Success !")
+        print("label object retrieved from GET users.labels.list() is of type dict")
+    else:
+        print("Failure !")
+        print("label objecyt retrieved from GET users.messages.get() is not of type dict")
+        print("Possible authentication error")
+        print("Exiting with error")
+        exit()
+    
+    assert type(results) is not None # Verify that HTTP request succeeded
+    
     labels = results.get('labels', [])
     return labels
 
 def getMessageData(message_id):
     message = {}
     message_data = service.users().messages().get(userId='me', id=message_id).execute()
+    
+    print("____________________________________________________________________\nTest case 3\n")
+    print("main.py: getMessageData(): Verify HTTP Request Response for single partial message data is not empty")
+    print("Failure indicates authentication/parameter issue")
+    if type(message_data) is dict:
+        print("Success !")
+        print("message_data retrieved from GET users.messages.get() is of type dict")
+    else:
+        print("Failure !")
+        print("message_data retrieved from GET users.messages.get() is not of type dict")
+        print("Possible authentication error")
+        print("Exiting with error")
+        exit()
     
     message['id'] = message_data['id']
     message['threadId'] = message_data['threadId']
@@ -319,6 +367,19 @@ def getFullMessage(message_id):
     except errors.HttpError as error:
         render_template('error.html', error)
 
+    print("____________________________________________________________________\nTest case 4\n")
+    print("main.py: getFullMessage(): Verify HTTP Request Response for full MIME message is not empty")
+    print("Failure indicates authentication/parameter issue")
+    if type(message_raw) is dict:
+        print("Success !")
+        print("message_raw retrieved from GET users.messages.get() is of type dict")
+    else:
+        print("Failure !")
+        print("message_raw retrieved from GET users.messages.get() is not of type dict")
+        print("Possible authentication error")
+        print("Exiting with error")
+        exit()
+        
     # decode raw body data
     message_string = base64.urlsafe_b64decode(message_raw.get('raw').encode('ASCII'))
 
